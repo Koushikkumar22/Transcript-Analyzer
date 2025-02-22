@@ -27,9 +27,11 @@ export const insertTranscriptSchema = createInsertSchema(transcripts).pick({
 // Validation schemas
 export const fileUploadSchema = z.object({
   file: z.object({
+    fieldname: z.string(),
     originalname: z.string(),
+    encoding: z.string(),
     mimetype: z.string(),
-    buffer: z.instanceof(Buffer),
+    buffer: z.any(), // Buffer is not directly validatable by zod
     size: z.number()
   }).refine(
     (file) => {
