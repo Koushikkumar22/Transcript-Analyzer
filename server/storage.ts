@@ -22,6 +22,7 @@ export class MemStorage implements IStorage {
       id,
       analysis: null,
       createdAt: new Date(),
+      provider: insertTranscript.provider || 'gemini',
     };
     this.transcripts.set(id, transcript);
     return transcript;

@@ -1,4 +1,3 @@
-import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import docxParser from 'docx-parser';
 import type { File } from 'multer';
@@ -14,10 +13,12 @@ export async function extractText(file: Express.Multer.File): Promise<string> {
           if (!file.buffer || file.buffer.length === 0) {
             throw new Error("Invalid PDF buffer");
           }
-          const pdfData = await pdf(file.buffer, {
-            version: 'v2.0.550'
-          });
+
+          // Dynamically import pdf-parse to avoid startup issues
+          const pdfParse = await import('pdf-parse');
+          const pdfData = await pdfParse.default(file.buffer);
           text = pdfData.text;
+
           if (!text || text.trim().length === 0) {
             throw new Error("No text content extracted from PDF");
           }

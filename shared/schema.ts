@@ -5,6 +5,7 @@ import { z } from "zod";
 export const transcripts = pgTable("transcripts", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
+  provider: text("provider").notNull().default('gemini'),
   analysis: jsonb("analysis").$type<{
     revenue?: {
       amount: string;
@@ -20,6 +21,7 @@ export const transcripts = pgTable("transcripts", {
 
 export const insertTranscriptSchema = createInsertSchema(transcripts).pick({
   content: true,
+  provider: true,
 });
 
 // Validation schemas
@@ -36,6 +38,7 @@ export const fileUploadSchema = z.object({
     },
     "File must be a TXT, PDF, DOC, or DOCX document under 5MB"
   ),
+  provider: z.enum(['gemini', 'openai']).default('gemini'),
 });
 
 export type InsertTranscript = z.infer<typeof insertTranscriptSchema>;

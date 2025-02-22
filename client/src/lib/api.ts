@@ -1,9 +1,10 @@
 import { apiRequest } from "./queryClient";
 import type { Transcript } from "@shared/schema";
 
-export async function analyzeTranscript(file: File): Promise<Transcript> {
+export async function analyzeTranscript(file: File, provider: 'gemini' | 'openai' = 'gemini'): Promise<Transcript> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("provider", provider);
 
   const response = await fetch("/api/analyze", {
     method: "POST",

@@ -5,23 +5,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, AlertCircle, FileText, TrendingUp, Target, Lightbulb } from "lucide-react";
+import { Upload, AlertCircle, FileText, TrendingUp, Target, Lightbulb, Brain } from "lucide-react";
 import { analyzeTranscript } from "@/lib/api";
 import type { Transcript } from "@shared/schema";
 import { motion } from "framer-motion";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
-const fadeIn = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 }
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
 };
 
 export default function Home() {
   const { toast } = useToast();
   const [result, setResult] = useState<Transcript | null>(null);
+  const [provider, setProvider] = useState<'gemini' | 'openai'>('gemini');
 
   const mutation = useMutation({
-    mutationFn: analyzeTranscript,
+    mutationFn: (file: File) => analyzeTranscript(file, provider),
     onSuccess: (data) => {
       setResult(data);
       toast({
@@ -55,49 +68,78 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 py-12">
+      <motion.div 
+        className="container mx-auto px-4 max-w-4xl"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
         <motion.h1 
-          className="text-5xl font-extrabold text-center mb-6 bg-gradient-to-r from-primary/90 to-primary bg-clip-text text-transparent"
-          {...fadeIn}
+          className="text-6xl font-black text-center mb-6 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+          variants={itemVariants}
         >
           Earnings Insight AI
         </motion.h1>
+
         <motion.p 
-          className="text-center text-muted-foreground mb-12 text-lg"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-center text-muted-foreground mb-8 text-lg"
+          variants={itemVariants}
         >
-          Upload your earnings transcript and get instant AI-powered analysis
+          Transform earnings transcripts into actionable insights with AI
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <Card className="mb-8 shadow-lg">
+        <motion.div variants={itemVariants}>
+          <Card className="mb-8 overflow-hidden border-2 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-6 w-6 text-primary" />
+                Choose AI Provider
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <RadioGroup
+                value={provider}
+                onValueChange={(value: 'gemini' | 'openai') => setProvider(value)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="gemini" id="gemini" />
+                  <Label htmlFor="gemini" className="font-medium">Gemini</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="openai" id="openai" />
+                  <Label htmlFor="openai" className="font-medium">OpenAI</Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardContent className="pt-6">
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200
+                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-300
                   ${
                     isDragActive
-                      ? "border-primary/70 bg-primary/5 scale-[0.99]"
+                      ? "border-primary bg-primary/5 scale-[0.99] shadow-inner"
                       : "border-gray-300 hover:border-primary hover:bg-primary/5"
                   }`}
               >
                 <input {...getInputProps()} />
-                <Upload className="mx-auto h-16 w-16 text-primary/60 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">
-                  {isDragActive ? "Drop the file here" : "Upload Earnings Transcript"}
+                <Upload className={`mx-auto h-20 w-20 transition-colors duration-300 ${
+                  isDragActive ? "text-primary" : "text-primary/60"
+                }`} />
+                <h3 className="text-2xl font-bold mt-4 mb-2">
+                  {isDragActive ? "Drop to analyze" : "Upload Transcript"}
                 </h3>
-                <p className="text-muted-foreground">
-                  Drag & drop a transcript file, or click to browse
+                <p className="text-muted-foreground text-lg">
+                  Drag & drop your earnings transcript
                 </p>
                 <p className="text-sm text-muted-foreground/70 mt-2">
-                  Supported formats: TXT, PDF, DOC, DOCX (max 5MB)
+                  Supports TXT, PDF, DOC, DOCX (max 5MB)
                 </p>
               </div>
             </CardContent>
@@ -105,15 +147,15 @@ export default function Home() {
         </motion.div>
 
         {mutation.isPending && (
-          <motion.div {...fadeIn}>
-            <Card className="shadow-md">
-              <CardHeader>
+          <motion.div variants={itemVariants}>
+            <Card className="shadow-lg">
+              <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <TrendingUp className="h-5 w-5 text-primary animate-pulse" />
                   Analyzing Transcript...
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-4 w-1/2" />
@@ -125,9 +167,14 @@ export default function Home() {
         )}
 
         {result?.analysis && (
-          <div className="space-y-6">
-            <motion.div {...fadeIn}>
-              <Card className="shadow-md overflow-hidden">
+          <motion.div 
+            className="space-y-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <motion.div variants={itemVariants}>
+              <Card className="shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                 <CardHeader className="border-b bg-primary/5">
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-primary" />
@@ -138,7 +185,7 @@ export default function Home() {
                   {result.analysis.revenue && (
                     <div className="space-y-2">
                       <h3 className="font-semibold text-lg">Revenue</h3>
-                      <p className="text-2xl font-bold text-primary">
+                      <p className="text-3xl font-bold text-primary">
                         {result.analysis.revenue.amount}
                       </p>
                       {result.analysis.revenue.growth && (
@@ -152,7 +199,7 @@ export default function Home() {
                   {result.analysis.eps && (
                     <div className="space-y-2">
                       <h3 className="font-semibold text-lg">Earnings Per Share</h3>
-                      <p className="text-2xl font-bold text-primary">{result.analysis.eps}</p>
+                      <p className="text-3xl font-bold text-primary">{result.analysis.eps}</p>
                     </div>
                   )}
                   {result.analysis.guidance && (
@@ -165,11 +212,8 @@ export default function Home() {
               </Card>
             </motion.div>
 
-            <motion.div 
-              {...fadeIn}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="shadow-md">
+            <motion.div variants={itemVariants}>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <CardHeader className="border-b bg-primary/5">
                   <CardTitle className="flex items-center gap-2">
                     <Lightbulb className="h-5 w-5 text-primary" />
@@ -177,17 +221,17 @@ export default function Home() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <ul className="grid gap-3">
+                  <ul className="grid gap-4">
                     {result.analysis.keyThemes.map((theme, index) => (
                       <motion.li
                         key={index}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.1 * index }}
-                        className="flex items-start gap-2"
+                        className="flex items-start gap-3"
                       >
-                        <Target className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <span>{theme}</span>
+                        <Target className="h-5 w-5 text-primary shrink-0 mt-1" />
+                        <span className="text-lg">{theme}</span>
                       </motion.li>
                     ))}
                   </ul>
@@ -196,11 +240,8 @@ export default function Home() {
             </motion.div>
 
             {result.analysis.futureOutlook && (
-              <motion.div 
-                {...fadeIn}
-                transition={{ delay: 0.3 }}
-              >
-                <Card className="shadow-md">
+              <motion.div variants={itemVariants}>
+                <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
                   <CardHeader className="border-b bg-primary/5">
                     <CardTitle className="flex items-center gap-2">
                       <Target className="h-5 w-5 text-primary" />
@@ -208,28 +249,25 @@ export default function Home() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-lg text-muted-foreground leading-relaxed">
                       {result.analysis.futureOutlook}
                     </p>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {mutation.isError && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <Alert variant="destructive">
+          <motion.div variants={itemVariants}>
+            <Alert variant="destructive" className="animate-shake">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{mutation.error.message}</AlertDescription>
             </Alert>
           </motion.div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

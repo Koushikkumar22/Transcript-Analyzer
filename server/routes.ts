@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { analyzeTranscript } from "./services/gemini";
+import { analyzeTranscript as analyzeWithGemini } from "./services/gemini";
+import { analyzeTranscript as analyzeWithOpenAI } from "./services/openai";
 import { extractText } from "./services/textExtractor";
 import { fileUploadSchema } from "@shared/schema";
 
@@ -20,9 +21,10 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Validate file size
+      // Validate file and provider
       const validation = fileUploadSchema.safeParse({
         file: req.file,
+        provider: req.body.provider || 'gemini'
       });
 
       if (!validation.success) {
@@ -33,10 +35,15 @@ export async function registerRoutes(app: Express) {
       const content = await extractText(req.file);
 
       // Create transcript record
-      const transcript = await storage.createTranscript({ content });
+      const transcript = await storage.createTranscript({ 
+        content,
+        provider: validation.data.provider
+      });
 
-      // Analyze with Gemini
-      const analysis = await analyzeTranscript(content);
+      // Analyze with selected provider
+      const analysis = await (validation.data.provider === 'openai' 
+        ? analyzeWithOpenAI(content)
+        : analyzeWithGemini(content));
 
       // Update transcript with analysis
       const updated = await storage.updateAnalysis(transcript.id, analysis);
