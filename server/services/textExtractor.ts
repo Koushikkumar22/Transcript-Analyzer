@@ -1,6 +1,7 @@
 import mammoth from 'mammoth';
 import docxParser from 'docx-parser';
 import type { File } from 'multer';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 export async function extractText(file: Express.Multer.File): Promise<string> {
   const fileType = file.originalname.toLowerCase().split('.').pop();
@@ -14,9 +15,9 @@ export async function extractText(file: Express.Multer.File): Promise<string> {
             throw new Error("Invalid PDF buffer");
           }
 
-          // Import and use pdf-parse directly with buffer
-          const pdfParse = await import('pdf-parse');
-          const pdfData = await pdfParse.default(Buffer.from(file.buffer));
+          // Use dataBuffer directly with pdf-parse
+          const dataBuffer = Buffer.from(file.buffer);
+          const pdfData = await pdfParse(dataBuffer);
           text = pdfData.text;
 
           if (!text || text.trim().length === 0) {
