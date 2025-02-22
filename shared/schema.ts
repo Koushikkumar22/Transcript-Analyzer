@@ -26,7 +26,12 @@ export const insertTranscriptSchema = createInsertSchema(transcripts).pick({
 
 // Validation schemas
 export const fileUploadSchema = z.object({
-  file: z.instanceof(File).refine(
+  file: z.object({
+    originalname: z.string(),
+    mimetype: z.string(),
+    buffer: z.instanceof(Buffer),
+    size: z.number()
+  }).refine(
     (file) => {
       const validTypes = [
         'text/plain',
@@ -34,7 +39,7 @@ export const fileUploadSchema = z.object({
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/msword'
       ];
-      return validTypes.includes(file.type) && file.size <= 5 * 1024 * 1024;
+      return validTypes.includes(file.mimetype) && file.size <= 5 * 1024 * 1024;
     },
     "File must be a TXT, PDF, DOC, or DOCX document under 5MB"
   ),
