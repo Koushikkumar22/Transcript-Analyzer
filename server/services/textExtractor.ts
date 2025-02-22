@@ -14,9 +14,9 @@ export async function extractText(file: Express.Multer.File): Promise<string> {
             throw new Error("Invalid PDF buffer");
           }
 
-          // Dynamically import pdf-parse to avoid startup issues
+          // Import and use pdf-parse directly with buffer
           const pdfParse = await import('pdf-parse');
-          const pdfData = await pdfParse.default(file.buffer);
+          const pdfData = await pdfParse.default(Buffer.from(file.buffer));
           text = pdfData.text;
 
           if (!text || text.trim().length === 0) {
