@@ -40,7 +40,10 @@ export default function Home() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
-      "text/*": [".txt"],
+      'text/plain': ['.txt'],
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc']
     },
     maxSize: 5 * 1024 * 1024,
     multiple: false,
@@ -94,7 +97,7 @@ export default function Home() {
                   Drag & drop a transcript file, or click to browse
                 </p>
                 <p className="text-sm text-muted-foreground/70 mt-2">
-                  Supported format: .txt (max 5MB)
+                  Supported formats: TXT, PDF, DOC, DOCX (max 5MB)
                 </p>
               </div>
             </CardContent>
