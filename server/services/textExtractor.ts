@@ -1,54 +1,46 @@
-import mammoth from 'mammoth';
-import docxParser from 'docx-parser';
-import type { File } from 'multer';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import mammoth from "mammoth";
+import docxParser from "docx-parser";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 export async function extractText(file: Express.Multer.File): Promise<string> {
-  const fileType = file.originalname.toLowerCase().split('.').pop();
-  let text = '';
+  const fileType = file.originalname.toLowerCase().split(".").pop();
+  let text = "";
 
   try {
     switch (fileType) {
-      case 'pdf':
-        try {
-          if (!file.buffer || file.buffer.length === 0) {
-            throw new Error("Invalid PDF buffer");
-          }
-
-          // Use dataBuffer directly with pdf-parse
-          const dataBuffer = Buffer.from(file.buffer);
-          const pdfData = await pdfParse(dataBuffer);
-          text = pdfData.text;
-
-          if (!text || text.trim().length === 0) {
-            throw new Error("No text content extracted from PDF");
-          }
-        } catch (pdfError: any) {
-          console.error("PDF parsing error:", pdfError);
-          throw new Error(`Failed to parse PDF: ${pdfError.message}`);
+      case "pdf": {
+        if (!file.buffer?.length) {
+          throw new Error("Invalid PDF buffer");
         }
-        break;
 
-      case 'docx':
+        const pdfData = await pdfParse(Buffer.from(file.buffer));
+        text = pdfData.text;
+        break;
+      }
+      case "docx": {
         const docxResult = await mammoth.extractRawText({ buffer: file.buffer });
         text = docxResult.value;
         break;
-
-      case 'doc':
+      }
+      case "doc": {
         text = await new Promise((resolve, reject) => {
           docxParser.parseDocument(file.buffer, (error: Error | null, output: string) => {
-            if (error) reject(error);
+            if (error) {
+              reject(error);
+              return;
+            }
+
             resolve(output);
           });
         });
         break;
-
-      case 'txt':
+      }
+      case "txt":
       default:
-        text = file.buffer.toString('utf-8');
+        text = file.buffer.toString("utf-8");
     }
 
-    if (!text || text.trim().length === 0) {
+    if (!text?.trim()) {
       throw new Error(`No text content extracted from ${fileType} file`);
     }
 
