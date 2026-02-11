@@ -1,5 +1,4 @@
-import type { Express } from "express";
-import { createServer } from "http";
+import type { Express, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { storage } from "./storage";
 import { analyzeTranscript as analyzeWithGemini } from "./services/gemini";
@@ -14,46 +13,61 @@ const upload = multer({
   },
 });
 
-export async function registerRoutes(app: Express) {
-  app.post("/api/analyze", upload.single("file"), async (req, res) => {
+function uploadHandler(req: Request, res: Response, next: NextFunction) {
+  upload.single("file")(req, res, (err) => {
+    if (!err) {
+      next();
+      return;
+    }
+
+    if (err instanceof multer.MulterError) {
+      const message =
+        err.code === "LIMIT_FILE_SIZE"
+          ? "File is too large. Maximum upload size is 5MB."
+          : err.message;
+
+      res.status(400).json({ message });
+      return;
+    }
+
+    next(err);
+  });
+}
+
+export function registerRoutes(app: Express) {
+  app.post("/api/analyze", uploadHandler, async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Validate file and provider
       const validation = fileUploadSchema.safeParse({
         file: req.file,
-        provider: req.body.provider || 'gemini'
+        provider: req.body.provider || "gemini",
       });
 
       if (!validation.success) {
         return res.status(400).json({ message: validation.error.message });
       }
 
-      // Extract text from file
       const content = await extractText(req.file);
-
-      // Create transcript record
-      const transcript = await storage.createTranscript({ 
+      const transcript = await storage.createTranscript({
         content,
-        provider: validation.data.provider
+        provider: validation.data.provider,
       });
 
-      // Analyze with selected provider
-      const analysis = await (validation.data.provider === 'openai' 
+      const analysis = await (validation.data.provider === "openai"
         ? analyzeWithOpenAI(content)
         : analyzeWithGemini(content));
 
-      // Update transcript with analysis
       const updated = await storage.updateAnalysis(transcript.id, analysis);
-
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const message = error?.message ?? "Unexpected server error";
+      const status = /missing|invalid|No file|Failed to extract|too large/i.test(message)
+        ? 400
+        : 500;
+      res.status(status).json({ message });
     }
   });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }

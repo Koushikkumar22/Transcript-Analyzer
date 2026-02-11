@@ -1,7 +1,33 @@
-import { apiRequest } from "./queryClient";
 import type { Transcript } from "@shared/schema";
 
-export async function analyzeTranscript(file: File, provider: 'gemini' | 'openai' = 'gemini'): Promise<Transcript> {
+async function parseAnalyzeError(response: Response): Promise<string> {
+  const fallbackMessage = `Request failed with status ${response.status}`;
+
+  try {
+    const parsed = (await response.clone().json()) as { message?: string };
+    if (parsed?.message) {
+      return parsed.message;
+    }
+  } catch {
+    // ignore JSON parsing errors and fall through to text
+  }
+
+  try {
+    const text = await response.text();
+    if (text) {
+      return text;
+    }
+  } catch {
+    // if body cannot be read, fall back to status text
+  }
+
+  return response.statusText || fallbackMessage;
+}
+
+export async function analyzeTranscript(
+  file: File,
+  provider: "gemini" | "openai" = "gemini",
+): Promise<Transcript> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("provider", provider);
@@ -13,8 +39,7 @@ export async function analyzeTranscript(file: File, provider: 'gemini' | 'openai
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error);
+    throw new Error(await parseAnalyzeError(response));
   }
 
   return response.json();

@@ -5,46 +5,54 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, AlertCircle, FileText, TrendingUp, Target, Lightbulb, Brain } from "lucide-react";
+import {
+  Upload,
+  AlertCircle,
+  TrendingUp,
+  Target,
+  Lightbulb,
+  Brain,
+  CheckCircle2,
+  FileText,
+} from "lucide-react";
 import { analyzeTranscript } from "@/lib/api";
 import type { Transcript } from "@shared/schema";
 import { motion } from "framer-motion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
-    }
-  }
+      staggerChildren: 0.1,
+    },
+  },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
+  show: { opacity: 1, y: 0 },
 };
 
 export default function Home() {
   const { toast } = useToast();
   const [result, setResult] = useState<Transcript | null>(null);
-  const [provider, setProvider] = useState<'gemini' | 'openai'>('gemini');
+  const [provider, setProvider] = useState<"gemini" | "openai">("gemini");
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: (file: File) => analyzeTranscript(file, provider),
     onSuccess: (data) => {
       setResult(data);
       toast({
-        title: "Analysis Complete",
-        description: "The transcript has been successfully analyzed.",
+        title: "Analysis complete",
+        description: "Your transcript has been processed successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Analysis failed",
         description: error.message,
         variant: "destructive",
       });
@@ -53,94 +61,120 @@ export default function Home() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
-      'text/plain': ['.txt'],
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/msword': ['.doc']
+      "text/plain": [".txt"],
+      "application/pdf": [".pdf"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+        ".docx",
+      ],
+      "application/msword": [".doc"],
     },
     maxSize: 5 * 1024 * 1024,
     multiple: false,
-    onDrop: (acceptedFiles) => {
+    onDrop: (acceptedFiles, rejections) => {
+      if (rejections.length > 0) {
+        toast({
+          title: "File rejected",
+          description: rejections[0].errors[0]?.message ?? "Invalid file",
+          variant: "destructive",
+        });
+      }
+
       if (acceptedFiles.length > 0) {
-        mutation.mutate(acceptedFiles[0]);
+        const file = acceptedFiles[0];
+        setSelectedFileName(file.name);
+        mutation.mutate(file);
       }
     },
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 py-12">
-      <motion.div 
-        className="container mx-auto px-4 max-w-4xl"
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 py-10 md:py-14">
+      <motion.div
+        className="container mx-auto max-w-5xl px-4"
         variants={containerVariants}
         initial="hidden"
         animate="show"
       >
-        <motion.h1 
-          className="text-6xl font-black text-center mb-6 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
-          variants={itemVariants}
-        >
-          Earnings Insight AI
-        </motion.h1>
-
-        <motion.p 
-          className="text-center text-muted-foreground mb-8 text-lg"
-          variants={itemVariants}
-        >
-          Transform earnings transcripts into actionable insights with AI
-        </motion.p>
+        <motion.div variants={itemVariants} className="mb-10 text-center">
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Upload • Analyze • Summarize
+          </p>
+          <h1 className="mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-4xl font-black tracking-tight text-transparent md:text-6xl">
+            Earnings Insight AI
+          </h1>
+          <p className="mx-auto max-w-2xl text-muted-foreground md:text-lg">
+            Extract revenue, EPS, guidance, and strategic themes from transcripts in
+            seconds.
+          </p>
+        </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="mb-8 overflow-hidden border-2 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-6 w-6 text-primary" />
-                Choose AI Provider
+          <Card className="mb-6 overflow-hidden border shadow-lg">
+            <CardHeader className="border-b bg-primary/5">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Brain className="h-5 w-5 text-primary" />
+                AI provider
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               <RadioGroup
                 value={provider}
-                onValueChange={(value: 'gemini' | 'openai') => setProvider(value)}
-                className="flex gap-4"
+                onValueChange={(value: "gemini" | "openai") => setProvider(value)}
+                className="grid gap-3 md:grid-cols-2"
               >
-                <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="gemini"
+                  className="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors hover:border-primary/50"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">Gemini</p>
+                    <p className="text-xs text-muted-foreground">Fast and balanced</p>
+                  </div>
                   <RadioGroupItem value="gemini" id="gemini" />
-                  <Label htmlFor="gemini" className="font-medium">Gemini</Label>
-                </div>
-                <div className="flex items-center space-x-2">
+                </label>
+                <label
+                  htmlFor="openai"
+                  className="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors hover:border-primary/50"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">OpenAI</p>
+                    <p className="text-xs text-muted-foreground">Strong reasoning quality</p>
+                  </div>
                   <RadioGroupItem value="openai" id="openai" />
-                  <Label htmlFor="openai" className="font-medium">OpenAI</Label>
-                </div>
+                </label>
               </RadioGroup>
             </CardContent>
           </Card>
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <Card className="mb-8 border shadow-lg">
             <CardContent className="pt-6">
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-300
-                  ${
-                    isDragActive
-                      ? "border-primary bg-primary/5 scale-[0.99] shadow-inner"
-                      : "border-gray-300 hover:border-primary hover:bg-primary/5"
-                  }`}
+                className={`cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-all duration-300 ${
+                  isDragActive
+                    ? "scale-[0.99] border-primary bg-primary/5 shadow-inner"
+                    : "border-muted-foreground/30 hover:border-primary hover:bg-primary/5"
+                }`}
               >
                 <input {...getInputProps()} />
-                <Upload className={`mx-auto h-20 w-20 transition-colors duration-300 ${
-                  isDragActive ? "text-primary" : "text-primary/60"
-                }`} />
-                <h3 className="text-2xl font-bold mt-4 mb-2">
-                  {isDragActive ? "Drop to analyze" : "Upload Transcript"}
+                <Upload
+                  className={`mx-auto h-14 w-14 transition-colors duration-300 ${
+                    isDragActive ? "text-primary" : "text-primary/70"
+                  }`}
+                />
+                <h3 className="mb-2 mt-4 text-2xl font-bold">
+                  {isDragActive ? "Drop to analyze" : "Upload transcript"}
                 </h3>
-                <p className="text-muted-foreground text-lg">
-                  Drag & drop your earnings transcript
-                </p>
-                <p className="text-sm text-muted-foreground/70 mt-2">
-                  Supports TXT, PDF, DOC, DOCX (max 5MB)
-                </p>
+                <p className="text-muted-foreground">Supports TXT, PDF, DOC, DOCX (max 5MB)</p>
+                {selectedFileName && (
+                  <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                    <FileText className="h-4 w-4" />
+                    {selectedFileName}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -149,10 +183,10 @@ export default function Home() {
         {mutation.isPending && (
           <motion.div variants={itemVariants}>
             <Card className="shadow-lg">
-              <CardHeader className="bg-primary/5 border-b">
+              <CardHeader className="border-b bg-primary/5">
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary animate-pulse" />
-                  Analyzing Transcript...
+                  <TrendingUp className="h-5 w-5 animate-pulse text-primary" />
+                  Analyzing transcript...
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
@@ -167,44 +201,36 @@ export default function Home() {
         )}
 
         {result?.analysis && (
-          <motion.div 
-            className="space-y-6"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-          >
+          <motion.div className="space-y-6" variants={containerVariants} initial="hidden" animate="show">
             <motion.div variants={itemVariants}>
-              <Card className="shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+              <Card className="overflow-hidden shadow-lg">
                 <CardHeader className="border-b bg-primary/5">
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-primary" />
-                    Financial Metrics
+                    Financial metrics
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-6 pt-6">
+                <CardContent className="grid gap-6 pt-6 md:grid-cols-3">
                   {result.analysis.revenue && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-lg">Revenue</h3>
-                      <p className="text-3xl font-bold text-primary">
-                        {result.analysis.revenue.amount}
-                      </p>
+                    <div className="space-y-2 rounded-lg border p-4">
+                      <h3 className="font-semibold">Revenue</h3>
+                      <p className="text-2xl font-bold text-primary">{result.analysis.revenue.amount}</p>
                       {result.analysis.revenue.growth && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <TrendingUp className="h-4 w-4" />
+                        <p className="text-sm text-muted-foreground">
                           Growth: {result.analysis.revenue.growth}
                         </p>
                       )}
                     </div>
                   )}
                   {result.analysis.eps && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-lg">Earnings Per Share</h3>
-                      <p className="text-3xl font-bold text-primary">{result.analysis.eps}</p>
+                    <div className="space-y-2 rounded-lg border p-4">
+                      <h3 className="font-semibold">EPS</h3>
+                      <p className="text-2xl font-bold text-primary">{result.analysis.eps}</p>
                     </div>
                   )}
                   {result.analysis.guidance && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-lg">Next Quarter Guidance</h3>
+                    <div className="space-y-2 rounded-lg border p-4 md:col-span-3">
+                      <h3 className="font-semibold">Next quarter guidance</h3>
                       <p className="text-muted-foreground">{result.analysis.guidance}</p>
                     </div>
                   )}
@@ -213,25 +239,25 @@ export default function Home() {
             </motion.div>
 
             <motion.div variants={itemVariants}>
-              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <Card className="shadow-lg">
                 <CardHeader className="border-b bg-primary/5">
                   <CardTitle className="flex items-center gap-2">
                     <Lightbulb className="h-5 w-5 text-primary" />
-                    Key Themes
+                    Key themes
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <ul className="grid gap-4">
                     {result.analysis.keyThemes.map((theme, index) => (
                       <motion.li
-                        key={index}
+                        key={`${theme}-${index}`}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 * index }}
+                        transition={{ delay: 0.08 * index }}
                         className="flex items-start gap-3"
                       >
-                        <Target className="h-5 w-5 text-primary shrink-0 mt-1" />
-                        <span className="text-lg">{theme}</span>
+                        <Target className="mt-1 h-5 w-5 shrink-0 text-primary" />
+                        <span>{theme}</span>
                       </motion.li>
                     ))}
                   </ul>
@@ -241,15 +267,15 @@ export default function Home() {
 
             {result.analysis.futureOutlook && (
               <motion.div variants={itemVariants}>
-                <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <Card className="shadow-lg">
                   <CardHeader className="border-b bg-primary/5">
                     <CardTitle className="flex items-center gap-2">
                       <Target className="h-5 w-5 text-primary" />
-                      Future Outlook
+                      Future outlook
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <p className="text-lg text-muted-foreground leading-relaxed">
+                    <p className="leading-relaxed text-muted-foreground">
                       {result.analysis.futureOutlook}
                     </p>
                   </CardContent>
@@ -267,6 +293,16 @@ export default function Home() {
             </Alert>
           </motion.div>
         )}
+
+        <motion.div variants={itemVariants} className="mt-8">
+          <Card className="border bg-muted/20">
+            <CardContent className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Tip: If analysis fails, verify your provider API key on the backend and try again.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
     </div>
   );
