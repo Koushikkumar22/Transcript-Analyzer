@@ -1,5 +1,4 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { createServer } from "http";
 import multer from "multer";
 import { storage } from "./storage";
 import { analyzeTranscript as analyzeWithGemini } from "./services/gemini";
@@ -35,7 +34,7 @@ function uploadHandler(req: Request, res: Response, next: NextFunction) {
   });
 }
 
-export async function registerRoutes(app: Express) {
+export function registerRoutes(app: Express) {
   app.post("/api/analyze", uploadHandler, async (req, res) => {
     try {
       if (!req.file) {
@@ -65,11 +64,10 @@ export async function registerRoutes(app: Express) {
       res.json(updated);
     } catch (error: any) {
       const message = error?.message ?? "Unexpected server error";
-      const status = /missing|invalid|No file|Failed to extract|too large/i.test(message) ? 400 : 500;
+      const status = /missing|invalid|No file|Failed to extract|too large/i.test(message)
+        ? 400
+        : 500;
       res.status(status).json({ message });
     }
   });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }
