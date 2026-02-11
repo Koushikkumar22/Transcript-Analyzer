@@ -1,5 +1,29 @@
 import type { Transcript } from "@shared/schema";
 
+async function parseAnalyzeError(response: Response): Promise<string> {
+  const fallbackMessage = `Request failed with status ${response.status}`;
+
+  try {
+    const parsed = (await response.clone().json()) as { message?: string };
+    if (parsed?.message) {
+      return parsed.message;
+    }
+  } catch {
+    // ignore JSON parsing errors and fall through to text
+  }
+
+  try {
+    const text = await response.text();
+    if (text) {
+      return text;
+    }
+  } catch {
+    // if body cannot be read, fall back to status text
+  }
+
+  return response.statusText || fallbackMessage;
+}
+
 export async function analyzeTranscript(
   file: File,
   provider: "gemini" | "openai" = "gemini",
@@ -15,22 +39,7 @@ export async function analyzeTranscript(
   });
 
   if (!response.ok) {
-    const fallbackMessage = `Request failed with status ${response.status}`;
-    let parsedMessage: string | undefined;
-
-    try {
-      const parsed = (await response.clone().json()) as { message?: string };
-      parsedMessage = parsed.message;
-    } catch {
-      // response body is not JSON; we'll try text below
-    }
-
-    if (parsedMessage) {
-      throw new Error(parsedMessage);
-    }
-
-    const rawBody = await response.text();
-    throw new Error(rawBody || fallbackMessage);
+    throw new Error(await parseAnalyzeError(response));
   }
 
   return response.json();
